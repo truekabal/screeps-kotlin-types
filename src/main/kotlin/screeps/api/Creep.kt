@@ -1,6 +1,5 @@
 package screeps.api
 
-import screeps.api.structures.Structure
 import screeps.api.structures.StructureController
 
 abstract external class Creep : RoomObjectNotNull, Owned, Attackable, Identifiable {
@@ -15,12 +14,12 @@ abstract external class Creep : RoomObjectNotNull, Owned, Attackable, Identifiab
     val ticksToLive: Int
 
     fun attack(target: Creep): ScreepsReturnCode
-    fun attack(target: Structure): ScreepsReturnCode
+    fun attack(target: IStructure): ScreepsReturnCode
     fun attackController(target: StructureController): ScreepsReturnCode
     fun build(target: ConstructionSite): ScreepsReturnCode
     fun cancelOrder(methodName: String): ScreepsReturnCode
     fun claimController(controller: StructureController): ScreepsReturnCode
-    fun dismantle(target: Structure): ScreepsReturnCode
+    fun dismantle(target: IStructure): ScreepsReturnCode
     fun drop(resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
     fun generateSafeMode(target: StructureController): ScreepsReturnCode
     fun getActiveBodyparts(type: ActiveBodyPartConstant): Int
@@ -35,19 +34,19 @@ abstract external class Creep : RoomObjectNotNull, Owned, Attackable, Identifiab
     fun notifyWhenAttacked(enable: Boolean): ScreepsReturnCode
     fun pickup(target: Resource): ScreepsReturnCode
     fun rangedAttack(target: Creep): ScreepsReturnCode
-    fun rangedAttack(target: Structure): ScreepsReturnCode
+    fun rangedAttack(target: IStructure): ScreepsReturnCode
     fun rangedHeal(target: Creep): ScreepsReturnCode
     fun rangedMassAttack(): ScreepsReturnCode
-    fun repair(structure: Structure): ScreepsReturnCode
+    fun repair(structure: IStructure): ScreepsReturnCode
     fun reserveController(controller: StructureController): ScreepsReturnCode
     fun say(message: String, toPublic: Boolean = definedExternally): ScreepsReturnCode
     fun signController(controller: StructureController, text: String): ScreepsReturnCode
     fun suicide(): ScreepsReturnCode
-    fun transfer(target: Structure, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
+    fun transfer(target: IStructure, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
     fun transfer(target: Creep, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
     fun upgradeController(controller: StructureController): ScreepsReturnCode
     fun withdraw(
-        target: Structure,
+        target: IStructure,
         resourceType: ResourceConstant,
         amount: Int = definedExternally
     ): ScreepsReturnCode

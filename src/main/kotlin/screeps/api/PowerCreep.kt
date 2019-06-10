@@ -1,6 +1,5 @@
 package screeps.api
 
-import screeps.api.structures.Structure
 import screeps.api.structures.StructureController
 import screeps.api.structures.StructurePowerBank
 import screeps.api.structures.StructurePowerSpawn
@@ -41,15 +40,15 @@ abstract external class PowerCreep: RoomObject, Owned, Attackable, Identifiable 
     fun say(message: String, toPublic: Boolean = definedExternally): ScreepsReturnCode
     fun spawn(powerSpawn: StructurePowerSpawn): ScreepsReturnCode
     fun suicide(): ScreepsReturnCode
-    fun transfer(target: Structure, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
+    fun transfer(target: IStructure, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
     fun transfer(target: Creep, resourceType: ResourceConstant, amount: Int = definedExternally): ScreepsReturnCode
     fun upgrade(power: PowerEffectConstant): ScreepsReturnCode
     fun usePower(power: PowerEffectConstant, target: RoomObject = definedExternally): ScreepsReturnCode
     fun usePower(power: PowerEffectConstant, target: RoomPosition = definedExternally): ScreepsReturnCode
     fun withdraw(
-            target: Structure,
-            resourceType: ResourceConstant,
-            amount: Int = definedExternally
+        target: IStructure,
+        resourceType: ResourceConstant,
+        amount: Int = definedExternally
     ): ScreepsReturnCode
 
     fun withdraw(
