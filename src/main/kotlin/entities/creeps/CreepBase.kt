@@ -28,6 +28,7 @@ abstract class CreepBase(val creep: Creep) {
         var target = pos.findClosestByRange(
                 type = FIND_MY_STRUCTURES,
                 opts = options { filter = {
+                    Memory.orders[it.id] == null &&
                     types.contains(it.structureType) &&
                             (it.unsafeCast<EnergyContainer>()).energy < (it.unsafeCast<EnergyContainer>()).energyCapacity
                 } }
@@ -37,9 +38,9 @@ abstract class CreepBase(val creep: Creep) {
         // tower
         val tower = pos.findClosestByRange(
                 type = FIND_STRUCTURES,
-                opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
+                opts = options { filter = {Memory.orders[it.id] == null &&it.structureType == STRUCTURE_TOWER }}
         ) as StructureTower?
-        if (tower != null && Memory.orders[tower.id] == null && tower.energy + creep.carryCapacity <= tower.energyCapacity ) {
+        if (tower != null && tower.energy < tower.energyCapacity * 0.75 ) {
             Memory.orders[tower.id] = creep.id
             return tower
         }
@@ -48,7 +49,7 @@ abstract class CreepBase(val creep: Creep) {
         types = hashSetOf(STRUCTURE_STORAGE, STRUCTURE_CONTAINER)
         target = pos.findClosestByRange(
                 type = FIND_MY_STRUCTURES,
-                opts = options { filter = { types.contains(it.structureType) } }
+                opts = options { filter = { Memory.orders[it.id] == null && types.contains(it.structureType) && it.unsafeCast<EnergyContainer>().energy < it.unsafeCast<EnergyContainer>().energyCapacity } }
         )
         return target
     }
@@ -64,7 +65,7 @@ abstract class CreepBase(val creep: Creep) {
         if (creep.memory.targetID == null) {
             target = getTargetToReturnEnergy(creep.pos)
             if (target == null) {
-                console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
+//                console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                 return
             }
             creep.memory.targetID = target.id
@@ -74,13 +75,19 @@ abstract class CreepBase(val creep: Creep) {
                 creep.memory.targetID = null
                 target = getTargetToReturnEnergy(creep.pos)
                 if (target == null) {
-                    console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
+//                    console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                     return
                 }
 
                 creep.memory.targetID = target.id
             }
 
+        }
+
+        if (target.unsafeCast<EnergyContainer>().energy == target.unsafeCast<EnergyContainer>().energyCapacity) {
+            creep.memory.targetID = null
+            returnEnergy()
+            return
         }
 
         val result = creep.transfer(target, RESOURCE_ENERGY)

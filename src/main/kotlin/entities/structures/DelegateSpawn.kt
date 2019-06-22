@@ -44,7 +44,7 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
 
         val maxCreepsByRole = hashMapOf<Int, Int>(
                 CREEP_ROLE.HARVESTER.ordinal  to 6,
-                CREEP_ROLE.BUILDER.ordinal    to kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(),
+                CREEP_ROLE.BUILDER.ordinal    to kotlin.math.min(kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(), 3),
                 CREEP_ROLE.FIXER.ordinal      to 1,
                 CREEP_ROLE.CLAIM.ordinal      to (if (claimerNeed()) 1 else 0),
                 CREEP_ROLE.UPGRADER.ordinal   to 1
