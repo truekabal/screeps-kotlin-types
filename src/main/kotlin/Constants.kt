@@ -1,0 +1,23 @@
+package main.kotlin
+
+import screeps.api.*
+
+val IMPORTANT_BUILD_TYPES = arrayOf(STRUCTURE_WALL, STRUCTURE_RAMPART, STRUCTURE_EXTENSION, STRUCTURE_TOWER)
+
+const val GC_TICK_TIMEOUT:Int = 10
+
+enum class CREEP_ROLE {
+    UNDEFINED,
+    HARVESTER,
+    ENERGY_CARRIER,
+    UPGRADER,
+    BUILDER,
+    FIXER,
+    CLAIM,
+}
+
+enum class CREEP_STATE {
+    UNDEFINED,
+    HARVEST,
+    RETURN_ENERGY
+}
