@@ -1,5 +1,6 @@
 package main.kotlin.entities.creeps
 
+import entities.creeps.isFull
 import main.kotlin.CREEP_ROLE
 import main.kotlin.CREEP_STATE
 import main.kotlin.memory.orders
@@ -9,7 +10,9 @@ import main.kotlin.memory.targetID
 import screeps.api.*
 import screeps.api.structures.Structure
 import screeps.api.structures.StructureSpawn
+import screeps.api.structures.StructureStorage
 import screeps.api.structures.StructureTower
+import screeps.utils.lazyPerTick
 import screeps.utils.unsafe.delete
 
 abstract class CreepBase(val creep: Creep) {
@@ -24,34 +27,36 @@ abstract class CreepBase(val creep: Creep) {
     // used by harvesters, builders, repairers
     fun getTargetToReturnEnergy(pos:RoomPosition = creep.pos):Structure? {
         // spawn
-        var types = hashSetOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION)
+        val types = arrayOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION)
         var target = pos.findClosestByRange(
                 type = FIND_MY_STRUCTURES,
                 opts = options { filter = {
                     Memory.orders[it.id] == null &&
-                    types.contains(it.structureType) &&
-                            (it.unsafeCast<EnergyContainer>()).energy < (it.unsafeCast<EnergyContainer>()).energyCapacity
+                    it.structureType in types &&
+                    (it.unsafeCast<EnergyContainer>()).energy < (it.unsafeCast<EnergyContainer>()).energyCapacity
                 } }
         )
-        if (target != null) return target
+        if (target != null) {
+            Memory.orders[target.id] = creep.id
+            return target
+        }
 
         // tower
         val tower = pos.findClosestByRange(
                 type = FIND_STRUCTURES,
-                opts = options { filter = {Memory.orders[it.id] == null &&it.structureType == STRUCTURE_TOWER }}
+                opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
         ) as StructureTower?
-        if (tower != null && tower.energy < tower.energyCapacity * 0.75 ) {
+        if (tower != null && Memory.orders[tower.id] == null && tower.energy < tower.energyCapacity * 0.75 ) {
             Memory.orders[tower.id] = creep.id
             return tower
         }
 
-        // storage
-        types = hashSetOf(STRUCTURE_STORAGE, STRUCTURE_CONTAINER)
-        target = pos.findClosestByRange(
-                type = FIND_MY_STRUCTURES,
-                opts = options { filter = { Memory.orders[it.id] == null && types.contains(it.structureType) && it.unsafeCast<EnergyContainer>().energy < it.unsafeCast<EnergyContainer>().energyCapacity } }
-        )
-        return target
+        val storage: StructureStorage = creep.room.storage ?: return null
+        if (storage.isFull()) {
+            return null
+        }
+
+        return storage
     }
 
     //------------------------------------------------------------------------------------------------------
@@ -65,7 +70,7 @@ abstract class CreepBase(val creep: Creep) {
         if (creep.memory.targetID == null) {
             target = getTargetToReturnEnergy(creep.pos)
             if (target == null) {
-//                console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
+                console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                 return
             }
             creep.memory.targetID = target.id
@@ -75,7 +80,7 @@ abstract class CreepBase(val creep: Creep) {
                 creep.memory.targetID = null
                 target = getTargetToReturnEnergy(creep.pos)
                 if (target == null) {
-//                    console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
+                    console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                     return
                 }
 
@@ -84,7 +89,11 @@ abstract class CreepBase(val creep: Creep) {
 
         }
 
-        if (target.unsafeCast<EnergyContainer>().energy == target.unsafeCast<EnergyContainer>().energyCapacity) {
+        if (
+            (target.structureType == STRUCTURE_STORAGE && target.unsafeCast<StructureStorage>().isFull()) ||
+            (target.unsafeCast<EnergyContainer>().energy == target.unsafeCast<EnergyContainer>().energyCapacity)
+        )
+        {
             creep.memory.targetID = null
             returnEnergy()
             return
