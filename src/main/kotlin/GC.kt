@@ -1,6 +1,7 @@
 package main.kotlin
 
 import main.kotlin.memory.orders
+import main.kotlin.memory.targetID
 import main.kotlin.memory.timer
 import screeps.api.*
 import screeps.api.Game.creeps
@@ -18,7 +19,9 @@ fun GC() {
             }
 
             for ((order, entityID) in Memory.orders) {
-                if (Game.getObjectById<Creep>(entityID) == null) {
+                val creep:Creep? = Game.getObjectById<Creep>(entityID)
+                if (creep == null || creep.memory.targetID != order)
+                {
                     delete(Memory.orders[order])
                 }
             }
