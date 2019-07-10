@@ -1,31 +1,75 @@
 package main.kotlin.entities.creeps
 
-import entities.creeps.isFull
+import entities.creeps.CreepManager
+import entities.structures.isFull
 import main.kotlin.CREEP_ROLE
 import main.kotlin.CREEP_STATE
-import main.kotlin.memory.orders
-import main.kotlin.memory.role
-import main.kotlin.memory.state
-import main.kotlin.memory.targetID
+import main.kotlin.memory.*
 import screeps.api.*
 import screeps.api.structures.Structure
+import screeps.api.structures.StructureLink
 import screeps.api.structures.StructureSpawn
-import screeps.api.structures.StructureStorage
 import screeps.api.structures.StructureTower
-import screeps.utils.lazyPerTick
 import screeps.utils.unsafe.delete
+import kotlin.math.min
 
 abstract class CreepBase(val creep: Creep) {
+
     open fun tick() {
         when(creep.memory.state) {
+            CREEP_STATE.IDLE.ordinal -> tickIdle()
             CREEP_STATE.HARVEST.ordinal -> harvest()
-            CREEP_STATE.RETURN_ENERGY.ordinal -> returnEnergy()
+            CREEP_STATE.TRANSFER_ENERGY.ordinal -> transferResource()
+            CREEP_STATE.WITHDRAW_ENERGY.ordinal -> withdrawEnergy()
         }
     }
 
+    fun moveTo(target: NavigationTarget): ScreepsReturnCode {
+        return creep.moveTo(target)
+    }
+
+    protected fun cleanupMemory() {
+        creep.memory.targetID = null
+        creep.memory.nextTargetID = null
+        creep.memory.resource = null
+    }
+
+    open fun tickIdle() {
+
+    }
+
     //----------------------------------------------------------------------------------------------------
-    // used by harvesters, builders, repairers
-    fun getTargetToReturnEnergy(pos:RoomPosition = creep.pos):Structure? {
+    open fun getTargetToWithdrawEnergy():Structure? {
+        val obj = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, opts = options {filter = {
+            it.structureType == STRUCTURE_LINK || it.structureType == STRUCTURE_STORAGE
+        }})
+
+        if (obj != null) {
+            if (obj.structureType == STRUCTURE_LINK && obj.unsafeCast<EnergyContainer>().energy != 0) {
+                return creep.room.storage
+            }
+        }
+
+        return obj
+    }
+
+    open fun getTargetToTransferEnergy(link:StructureLink):Structure? {
+        return getTargetToTransferEnergy()
+    }
+
+    open fun getTargetToTransferEnergy(source:Source):Structure? {
+        val linkID = creep.room.memory.links.sources[source.id]
+        if (linkID != null) {
+            val link = Game.getObjectById<StructureLink>(linkID)
+            if (link != null && !link.isFull()) {
+                return link
+            }
+        }
+
+        return getTargetToTransferEnergy()
+    }
+
+    open fun getTargetToTransferEnergy(pos:RoomPosition = creep.pos):Structure? {
         // spawn
         val types = arrayOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION)
         var target = pos.findClosestByRange(
@@ -51,26 +95,41 @@ abstract class CreepBase(val creep: Creep) {
             return tower
         }
 
-        val storage: StructureStorage = creep.room.storage ?: return null
-        if (storage.isFull()) {
-            return null
-        }
-
-        return storage
+        return creep.room.storage
     }
 
     //------------------------------------------------------------------------------------------------------
-    protected fun returnEnergy() {
+    protected fun withdrawEnergy() {
+        val target:Structure? = Game.getObjectById(creep.memory.targetID)
+        if (target == null) {
+            cleanupMemory()
+            creep.memory.state = CREEP_STATE.IDLE.ordinal
+            tickIdle()
+            return
+        }
+
+        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.carryCapacity))
+        when(result) {
+            ERR_NOT_IN_RANGE -> moveTo(target)
+            ERR_NOT_ENOUGH_RESOURCES -> {
+                cleanupMemory()
+                creep.memory.state = CREEP_STATE.IDLE.ordinal
+            }
+            OK -> onEnergyWithdraw()
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------
+    protected fun transferResource() {
         if (creep.carry.energy == 0) {
-            onEnergyReturn()
+            onResourceTransferComplete()
             return
         }
 
         var target: Structure?
         if (creep.memory.targetID == null) {
-            target = getTargetToReturnEnergy(creep.pos)
+            target = getTargetToTransferEnergy(creep.pos)
             if (target == null) {
-                console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                 return
             }
             creep.memory.targetID = target.id
@@ -78,9 +137,8 @@ abstract class CreepBase(val creep: Creep) {
             target = Game.getObjectById(creep.memory.targetID)
             if (target == null) {
                 creep.memory.targetID = null
-                target = getTargetToReturnEnergy(creep.pos)
+                target = getTargetToTransferEnergy(creep.pos)
                 if (target == null) {
-                    console.log("nowhere to return energy. creep " + creep.name + " room " + creep.room.name)
                     return
                 }
 
@@ -89,23 +147,12 @@ abstract class CreepBase(val creep: Creep) {
 
         }
 
-        if (
-            (target.structureType == STRUCTURE_STORAGE && target.unsafeCast<StructureStorage>().isFull()) ||
-            (target.unsafeCast<EnergyContainer>().energy == target.unsafeCast<EnergyContainer>().energyCapacity)
-        )
-        {
-            creep.memory.targetID = null
-            returnEnergy()
-            return
-        }
-
         val result = creep.transfer(target, RESOURCE_ENERGY)
         when(result) {
             ERR_NOT_IN_RANGE -> creep.moveTo(target)
             ERR_FULL -> {
                 delete(Memory.orders[creep.memory.targetID!!])
                 creep.memory.targetID = null
-//                returnEnergy()
                 return
             }
             OK -> {
@@ -137,8 +184,9 @@ abstract class CreepBase(val creep: Creep) {
         }
     }
 
-    protected open fun onEnergyReturn() {}
+    protected open fun onResourceTransferComplete() {}
     protected open fun onHarvestFinished() {}
+    protected open fun onEnergyWithdraw() {}
 
 }
 
@@ -149,6 +197,8 @@ fun getInitialCreepMemory(spawn:StructureSpawn, role:Int, room:Room = spawn.room
         CREEP_ROLE.HARVESTER.ordinal -> CreepHarvester.fillMemory(room, memory)
         CREEP_ROLE.UPGRADER.ordinal -> CreepUpgrader.fillMemory(room, memory)
         CREEP_ROLE.BUILDER.ordinal -> CreepBuilder.fillMemory(room, memory)
+        CREEP_ROLE.MANAGER.ordinal -> CreepManager.fillMemory(room, memory)
+        CREEP_ROLE.FIXER.ordinal -> CreepFixer.fillMemory(room, memory)
     }
     return memory
 }
@@ -160,5 +210,6 @@ fun Creep.tick() {
         CREEP_ROLE.UPGRADER.ordinal     -> CreepUpgrader(this).tick()
         CREEP_ROLE.CLAIM.ordinal        -> CreepClaim(this).tick()
         CREEP_ROLE.BUILDER.ordinal      -> CreepBuilder(this).tick()
+        CREEP_ROLE.MANAGER.ordinal      -> CreepManager(this).tick()
     }
 }

@@ -1,9 +1,12 @@
 package main.kotlin.entities.creeps
 
+import main.kotlin.memory.controller
+import main.kotlin.memory.links
 import main.kotlin.memory.targetID
 import main.kotlin.memory.upgrading
 import screeps.api.*
 import screeps.api.structures.StructureController
+import screeps.api.structures.StructureLink
 
 class CreepUpgrader(creep: Creep) : CreepBase(creep) {
     companion object {
@@ -13,7 +16,7 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
     }
 
     override fun tick() {
-
+        val controller = Game.getObjectById<StructureController>(creep.memory.targetID)!!
         if(creep.memory.upgrading && creep.carry.energy == 0) {
             creep.memory.upgrading = false
             creep.say("🔄 harvest")
@@ -24,33 +27,19 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
         }
 
         if(creep.memory.upgrading) {
-            val controller: StructureController? = Game.getObjectById(creep.memory.targetID)
-            if(controller != null && creep.upgradeController(controller) == ERR_NOT_IN_RANGE) {
+            if(creep.upgradeController(controller) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(controller.pos)
             }
         } else {
-            val tombstones = creep.room.find(FIND_TOMBSTONES, options { filter = { it.store[screeps.api.RESOURCE_ENERGY]!! > 0 }})
-            if (tombstones.isNotEmpty()) {
-                if (creep.withdraw(tombstones[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(tombstones[0])
+            val link: StructureLink? = Game.getObjectById(creep.room.memory.links.controller)
+            if (link != null && link.energy > 0) {
+                if (creep.withdraw(link, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(link)
                 }
                 return
             }
 
-            val energy = creep.room.find(FIND_DROPPED_RESOURCES, options {
-                filter = {
-                    it.resourceType == screeps.api.RESOURCE_ENERGY && it.amount > creep.carryCapacity / 4
-                }
-            })
-
-            if (energy.isNotEmpty()) {
-                if (creep.pickup(energy[0]) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(energy[0])
-                }
-                return
-            }
-
-            val storage = creep.room.storage
+            val storage = controller.room.storage
             if (storage != null && storage.store[RESOURCE_ENERGY]!! >= creep.carryCapacity) {
                 if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(storage)
@@ -58,7 +47,7 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
                 return
             }
 
-            val sources = creep.room.find(FIND_SOURCES_ACTIVE)
+            val sources = controller.room.find(FIND_SOURCES_ACTIVE)
             sources.sort { a, b -> creep.pos.getRangeTo(a.pos) - creep.pos.getRangeTo(b.pos) }
             if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(sources[0].pos)

@@ -1,13 +1,13 @@
-import main.kotlin.*
+import main.kotlin.Core
+import main.kotlin.GC
 
 // Entry point
 @Suppress("unused")
+
+val gc:GC = GC()
+val core:Core = Core()
+
 fun loop() {
-    tickTimer()
-    memoryActions()
-    garbageCollection()
-    lazyActions()
-    preActions()
-    mainActions()
-    postActions()
+    gc.run()
+    core.tick()
 }

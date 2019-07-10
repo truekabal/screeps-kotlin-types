@@ -7,26 +7,35 @@ import screeps.api.*
 import screeps.api.Game.creeps
 import screeps.utils.unsafe.delete
 
-fun GC() {
-    try {
-        if (Memory.timer % GC_TICK_TIMEOUT == 0) {
+val GC_PERIOD:Int = 10
 
-            // clean creeps
-            for ((creepName, _) in Memory.creeps) {
-                if (creeps[creepName] == null) {
-                    delete(Memory.creeps[creepName])
-                }
+class GC {
+    fun run() {
+        try {
+            if (Memory.timer % GC_PERIOD == 0) {
+                gcCreeps()
+                gcOrders()
             }
+        } catch (e:Error) {
+            console.log(e.message)
+        }
+    }
 
-            for ((order, entityID) in Memory.orders) {
-                val creep:Creep? = Game.getObjectById<Creep>(entityID)
-                if (creep == null || creep.memory.targetID != order)
-                {
-                    delete(Memory.orders[order])
-                }
+    private fun gcCreeps() {
+        for ((creepName, _) in Memory.creeps) {
+            if (creeps[creepName] == null) {
+                delete(Memory.creeps[creepName])
             }
         }
-    } catch (e:Error) {
-        console.log(e.message)
+    }
+
+    private fun gcOrders() {
+        for ((order, entityID) in Memory.orders) {
+            val creep:Creep? = Game.getObjectById<Creep>(entityID)
+            if (creep == null || creep.memory.targetID != order)
+            {
+                delete(Memory.orders[order])
+            }
+        }
     }
 }

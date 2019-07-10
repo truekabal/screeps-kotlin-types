@@ -5,10 +5,7 @@ import main.kotlin.helpers.getHarvestersOnSource
 import main.kotlin.memory.sourceID
 import main.kotlin.memory.state
 import main.kotlin.memory.targetID
-import screeps.api.Creep
-import screeps.api.CreepMemory
-import screeps.api.FIND_SOURCES
-import screeps.api.Room
+import screeps.api.*
 
 class CreepHarvester(creep: Creep) : CreepBase(creep) {
     companion object {
@@ -22,15 +19,20 @@ class CreepHarvester(creep: Creep) : CreepBase(creep) {
         }
     }
 
-    override fun onEnergyReturn() {
+    override fun onResourceTransferComplete() {
         creep.memory.targetID = creep.memory.sourceID
         creep.memory.state = CREEP_STATE.HARVEST.ordinal
         harvest()
     }
 
     override fun onHarvestFinished() {
-        creep.memory.targetID = null
-        creep.memory.state = CREEP_STATE.RETURN_ENERGY.ordinal
-        returnEnergy()
+        val target = getTargetToTransferEnergy(Game.getObjectById<Source>(creep.memory.targetID)!!)
+        creep.memory.state = CREEP_STATE.TRANSFER_ENERGY.ordinal
+        if (target != null) {
+            creep.memory.targetID = target.id
+            transferResource()
+        } else {
+            creep.memory.targetID = null
+        }
     }
 }
