@@ -31,6 +31,7 @@ abstract class CreepBase(val creep: Creep) {
     protected fun cleanupMemory() {
         creep.memory.targetID = null
         creep.memory.nextTargetID = null
+        creep.memory.resourceAmount = 0
         creep.memory.resource = null
     }
 
@@ -58,6 +59,16 @@ abstract class CreepBase(val creep: Creep) {
     }
 
     open fun getTargetToTransferEnergy(source:Source):Structure? {
+        // tower
+        val tower = creep.pos.findClosestByRange(
+            type = FIND_MY_STRUCTURES,
+            opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
+        ) as StructureTower?
+        if (tower != null && Memory.orders[tower.id] == null && tower.energy < tower.energyCapacity * 0.75 ) {
+            Memory.orders[tower.id] = creep.id
+            return tower
+        }
+
         val linkID = creep.room.memory.links.sources[source.id]
         if (linkID != null) {
             val link = Game.getObjectById<StructureLink>(linkID)
@@ -83,16 +94,6 @@ abstract class CreepBase(val creep: Creep) {
         if (target != null) {
             Memory.orders[target.id] = creep.id
             return target
-        }
-
-        // tower
-        val tower = pos.findClosestByRange(
-                type = FIND_STRUCTURES,
-                opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
-        ) as StructureTower?
-        if (tower != null && Memory.orders[tower.id] == null && tower.energy < tower.energyCapacity * 0.75 ) {
-            Memory.orders[tower.id] = creep.id
-            return tower
         }
 
         return creep.room.storage

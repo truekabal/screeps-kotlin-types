@@ -1,5 +1,6 @@
 package entities.creeps
 
+import entities.structures.capacityCoef
 import entities.structures.isFull
 import entities.structures.lessThanHalfCapacity
 import entities.structures.moreThanHalfCapacity
@@ -115,15 +116,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
             return spawnStuff
         }
 
-        // ------------  towers  ------------
-        val tower = pos.findClosestByRange(
-            type = FIND_STRUCTURES,
-            opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
-        ) as StructureTower?
-        if (tower != null && tower.lessThanHalfCapacity() ) {
-            return tower
-        }
-
+        // ------------  labs  ------------
         val labs = creep.room.find(FIND_MY_STRUCTURES, opts = options {filter = {it.structureType == STRUCTURE_LAB}}).unsafeCast<Array<StructureLab>>()
         if (labs.isNotEmpty()) {
             for (lab in labs) {
@@ -133,12 +126,26 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
             }
         }
 
+        // ------------  towers  ------------
+        val towers = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {it.structureType == STRUCTURE_TOWER }})
+        if (towers.isNotEmpty()) {
+            for (tower in towers) {
+                if (Memory.orders[tower.id] == null && tower.unsafeCast<StructureTower>().capacityCoef() < 0.75) {
+                    return tower
+                }
+            }
+        }
+
         val terminal = creep.room.terminal
         if (terminal != null && !terminal.isFull() && terminal.store.getOrDefault(RESOURCE_ENERGY, 0) < 100000) {
             return terminal
         }
 
-        return creep.room.storage
+        if (creep.carry.energy > 0) {
+            return creep.room.storage
+        }
+
+        return null
     }
 
     override fun onEnergyWithdraw() {
@@ -148,6 +155,14 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
     }
 
     override fun onResourceTransferComplete() {
+        if (creep.carry.energy > 0) {
+            val target = getTargetToTransferEnergy()
+            if (target != null) {
+                creep.memory.targetID = target.id
+                return
+            }
+        }
+        cleanupMemory()
         creep.memory.state = CREEP_STATE.IDLE.ordinal
         tickIdle()
     }
