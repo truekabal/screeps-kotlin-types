@@ -9,18 +9,18 @@ import screeps.utils.unsafe.delete
 import screeps.utils.unsafe.jsObject
 import kotlin.random.Random
 
+val spawnParams: HashMap<Int, Array<out BodyPartConstant>> = hashMapOf(
+    CREEP_ROLE.HARVESTER.ordinal  to arrayOf(WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY),
+    CREEP_ROLE.BUILDER.ordinal    to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
+    CREEP_ROLE.FIXER.ordinal      to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
+    CREEP_ROLE.CLAIM.ordinal      to arrayOf(CLAIM, CLAIM, MOVE),
+    CREEP_ROLE.UPGRADER.ordinal   to arrayOf(WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY),
+    CREEP_ROLE.MANAGER.ordinal    to arrayOf(MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY)
+)
+
 class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
     val roomToClaim: String? = null // "W46N33"
     inline fun StructureSpawn.energyAvailable(): Int = room.energyAvailable
-
-    val spawnParams: HashMap<Int, Array<BodyPartConstant>> = hashMapOf<Int, Array<BodyPartConstant>>(
-        CREEP_ROLE.HARVESTER.ordinal  to arrayOf<BodyPartConstant>(WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY),
-        CREEP_ROLE.BUILDER.ordinal    to arrayOf<BodyPartConstant>(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
-        CREEP_ROLE.FIXER.ordinal      to arrayOf<BodyPartConstant>(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
-        CREEP_ROLE.CLAIM.ordinal      to arrayOf<BodyPartConstant>(CLAIM, CLAIM, MOVE),
-        CREEP_ROLE.UPGRADER.ordinal   to arrayOf<BodyPartConstant>(WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY),
-        CREEP_ROLE.MANAGER.ordinal    to arrayOf<BodyPartConstant>(MOVE, MOVE, CARRY, CARRY, CARRY, CARRY)
-    )
 
     override fun tick() {
         if (spawn.spawning != null) {
@@ -34,6 +34,8 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
         }
 
         if (tryRenewNearest()) return
+
+        val storage = spawn.room.storage
 
         val creepsByRole = hashMapOf<Int, Int>(
                 CREEP_ROLE.HARVESTER.ordinal  to 0,
@@ -49,8 +51,8 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
                 CREEP_ROLE.BUILDER.ordinal    to kotlin.math.min(kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(), 3),
                 CREEP_ROLE.FIXER.ordinal      to 1,
                 CREEP_ROLE.CLAIM.ordinal      to (if (claimerNeed()) 1 else 0),
-                CREEP_ROLE.UPGRADER.ordinal   to 1,
-                CREEP_ROLE.MANAGER.ordinal    to 1
+                CREEP_ROLE.UPGRADER.ordinal   to (if (storage != null && storage.store.energy > 900000) 3 else 1),
+                CREEP_ROLE.MANAGER.ordinal    to (if (storage != null) 1 else 0)
         )
 
         //TODO: move to preactions
@@ -74,7 +76,7 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
             if (creepsByRole[roleInt]!! < maxCreepsByRole[roleInt]!!) {
                 Memory[roomLock] = true
                 if (spawn.spawnCreep(
-                                spawnParams[roleInt]!!,
+                                spawnParams[roleInt]!!.copyOf(),
                                 "${spawn.room.name}_${role.toString().toLowerCase()}_${(Random.nextDouble() * 10000000).toInt()}",
                                 options { memory = getInitialCreepMemory(spawn, roleInt) }
                     ) == OK)

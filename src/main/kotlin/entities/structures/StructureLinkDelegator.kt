@@ -11,7 +11,7 @@ const val LINK_ROLE_MANAGE_PERIOD:Int = 25
 const val MIN_ENERGY_TO_TRANSFER:Int = 100
 
 fun roomCanHaveLinks(room:Room):Boolean {
-    return room.controller != null && room.controller.my && room.controller.level >= LINK_UNLOCK_ROOM_LEVEL
+    return room.controller != null && room.controller.my && room.controller.level > 0 && CONTROLLER_STRUCTURES[STRUCTURE_LINK]!![room.controller.level]!! > 0
 }
 
 fun manageStructureLinkRoles() {
@@ -115,7 +115,7 @@ fun transferEnergyByLinks(room:Room) {
 
     if (memory.storage != null) {
         link = Game.getObjectById(memory.storage)
-        if (link != null && link.cooldown == 0 && link.energy > MIN_ENERGY_TO_TRANSFER) {
+        if (link != null && link.cooldown == 0 && !link.lessThanHalfCapacity()) {
             availableLinks = availableLinks.plus(link)
         }
     }
@@ -133,7 +133,7 @@ fun transferEnergyByLinks(room:Room) {
         if (target.energy < target.energyCapacity - MIN_ENERGY_TO_TRANSFER / 2) {
             var energyNeed = target.energyCapacity - target.energy
             var energyReceived = 0
-            var lastUsedIndex:Int = -1
+            var lastUsedIndex:Int = 0
 
             for ((i, source) in availableLinks.withIndex()) {
                 if (target == source) {
@@ -143,7 +143,7 @@ fun transferEnergyByLinks(room:Room) {
                 val result = source.transferEnergy(target, energy)
                 if (result == OK) {
                     energyReceived += (energy - ceil(energy * LINK_LOSS_RATIO)).toInt()
-                    lastUsedIndex = i
+                    lastUsedIndex = i + 1
                     energyNeed -= energy
                     if (energyNeed <= 35) {
                         RoomVisual(target.room.name).text("-$energy", source.pos)
@@ -153,7 +153,7 @@ fun transferEnergyByLinks(room:Room) {
 
             }
 
-            if (lastUsedIndex > -1) {
+            if (lastUsedIndex > 0) {
                 RoomVisual(target.room.name).text("+$energyReceived", target.pos)
                 availableLinks = availableLinks.drop(lastUsedIndex)
             }

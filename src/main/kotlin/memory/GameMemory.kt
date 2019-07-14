@@ -42,7 +42,7 @@ var CreepMemory.role:Int by memory { CREEP_ROLE.UNDEFINED.ordinal }
 var CreepMemory.room:String by memory {""}
 
 // creep harvester
-var CreepMemory.sourceID: String by memory { "" }
+var CreepMemory.sourceID: String? by memory()
 
 // orders
  // initializes in seldom actions

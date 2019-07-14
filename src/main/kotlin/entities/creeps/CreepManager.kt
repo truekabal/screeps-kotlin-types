@@ -1,18 +1,13 @@
 package entities.creeps
 
-import entities.structures.capacityCoef
-import entities.structures.isFull
-import entities.structures.lessThanHalfCapacity
-import entities.structures.moreThanHalfCapacity
+import entities.structures.*
 import main.kotlin.CREEP_STATE
 import main.kotlin.entities.creeps.CreepBase
 import main.kotlin.memory.*
 import screeps.api.*
-import screeps.api.structures.Structure
-import screeps.api.structures.StructureLab
-import screeps.api.structures.StructureLink
-import screeps.api.structures.StructureTower
+import screeps.api.structures.*
 import screeps.utils.getOrDefault
+import kotlin.math.min
 
 val SPAWNS_AND_EXTENSIONS = arrayOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_POWER_SPAWN)
 
@@ -29,60 +24,93 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         return Game.getObjectById(creep.room.memory.links.storage)
     }
 
+    //----------------------------------------------------------------------------------------------------
     override fun tickIdle() {
-        // нашли источник ресов
+        if (transferPower()) {
+            tick()
+            return
+        }
+
+        if (transferEnergy())  {
+            tick()
+            return
+        }
+
+        if (transferResources()) {
+            tick()
+            return
+        }
+    }
+
+    //----------------------------------------------------------------------------------------------------
+    private fun transferEnergy():Boolean {
+        // check withdraw from link
         val link:StructureLink? = getStorageLink()
         var target:Structure?
-        // check withdraw from link
         if (link != null && link.moreThanHalfCapacity()) {
             target = getTargetToTransferEnergy(link)
             if (target != null) {
                 creep.memory.targetID = link.id
-                creep.memory.state = CREEP_STATE.WITHDRAW_ENERGY.ordinal
+                creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
                 creep.memory.resource = RESOURCE_ENERGY
-                creep.memory.resourceAmount = link.energy - link.energyCapacity / 2
+                creep.memory.resourceAmount = min(link.energy - link.energyCapacity / 2, creep.emptySpace)
                 creep.memory.nextTargetID = target.id
-                tick()
-                return
+                return true
             }
         }
 
-        val source:Structure? = creep.room.storage
-        if (source == null) {
-            return
-        }
+        val source: StructureStorage = creep.room.storage ?: return false
 
         // нашли куда нести
         target = getTargetToTransferEnergy()
         if (target == null) {
-            return
+            return false
         }
 
-        // записали двойную задачу
-        // выполнили
-        // повторили
         creep.memory.targetID = source.id
-        creep.memory.state = CREEP_STATE.WITHDRAW_ENERGY.ordinal
+        creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
         creep.memory.resource = RESOURCE_ENERGY
         if (target.structureType == STRUCTURE_LINK) {
-            creep.memory.resourceAmount = target.unsafeCast<EnergyContainer>().energyCapacity / 2 - target.unsafeCast<EnergyContainer>().energy
+            creep.memory.resourceAmount = min(creep.carryCapacity, target.unsafeCast<EnergyContainer>().energyCapacity / 2 - target.unsafeCast<EnergyContainer>().energy)
         } else {
             creep.memory.resourceAmount = 0
         }
         creep.memory.nextTargetID = target.id
-        tick()
+        return true
     }
 
-    private fun checkLinkToStorage():Boolean {
-        val link = (if (creep.room.memory.links.storage == null) null else Game.getObjectById(creep.room.memory.links.storage)) as StructureLink?
-            ?: return false
-        val storage = creep.room.storage
-            ?: return false
-
-        if (link.energy > link.energyCapacity / 2) {
-            return true
+    //----------------------------------------------------------------------------------------------------
+    private fun transferPower():Boolean {
+        if (creep.isFull) {
+            return false
         }
 
+        val powerSpawn = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {
+                    it.structureType == STRUCTURE_POWER_SPAWN &&
+                    it.unsafeCast<StructurePowerSpawn>().power < it.unsafeCast<StructurePowerSpawn>().powerCapacity / 4
+        }}).firstOrNull().unsafeCast<StructurePowerSpawn?>() ?: return false
+
+        val powerContainers:Array<Store?> = arrayOf(
+            creep.room.storage,
+            creep.room.terminal
+        )
+        for (container:Store? in powerContainers) {
+            if (container != null && container.store.getOrDefault(RESOURCE_POWER, 0) > 0) {
+                val powerAmount = arrayOf(powerSpawn.requiredPower, container.store[RESOURCE_POWER]!!.toInt(), creep.emptySpace).min()!!
+                creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
+                creep.memory.targetID = container.unsafeCast<Structure>().id
+                creep.memory.resourceAmount = powerAmount
+                creep.memory.resource = RESOURCE_POWER
+                creep.memory.nextTargetID = powerSpawn.id
+                return true
+            }
+        }
+
+        return false
+    }
+
+    //----------------------------------------------------------------------------------------------------
+    private fun transferResources():Boolean {
         return false
     }
 
@@ -96,6 +124,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         return getTargetToTransferEnergy()
     }
 
+    //----------------------------------------------------------------------------------------------------
     override fun getTargetToTransferEnergy(pos: RoomPosition): Structure? {
         val link:StructureLink? = getStorageLink()
         if (link != null && link.lessThanHalfCapacity()) {
@@ -103,17 +132,22 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         }
 
         // ------------  spawns and friends  ------------
-        val spawnStuff = pos.findClosestByRange(
-            type = FIND_MY_STRUCTURES,
-            opts = options { filter = {
+        val spawnStuff = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {
                         Memory.orders[it.id] == null &&
                         it.structureType in SPAWNS_AND_EXTENSIONS &&
                         !it.unsafeCast<EnergyContainer>().isFull()
                 }
             }
         )
-        if (spawnStuff != null) {
-            return spawnStuff
+        if (spawnStuff.isNotEmpty()) {
+            spawnStuff.sortBy {
+                if (it.structureType == STRUCTURE_POWER_SPAWN)
+                        Int.MAX_VALUE
+                else {
+                    it.pos.getRangeTo(creep)
+                }
+            }
+            return spawnStuff[0]
         }
 
         // ------------  labs  ------------
@@ -148,22 +182,24 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         return null
     }
 
-    override fun onEnergyWithdraw() {
-        creep.memory.state = CREEP_STATE.TRANSFER_ENERGY.ordinal
+    override fun onWithdraw() {
+        creep.memory.state = CREEP_STATE.TRANSFER.ordinal
         creep.memory.targetID = creep.memory.nextTargetID
         creep.memory.nextTargetID = null
     }
 
-    override fun onResourceTransferComplete() {
-        if (creep.carry.energy > 0) {
-            val target = getTargetToTransferEnergy()
-            if (target != null) {
-                creep.memory.targetID = target.id
-                return
-            }
-        }
+    override fun onTransferComplete() {
+//        if (creep.carry.energy > 0) {
+//            val target = getTargetToTransferEnergy()
+//            if (target != null) {
+//                creep.memory.resourceAmount = 0
+//                creep.memory.targetID = target.id
+//                creep.moveTo(target)
+//                return
+//            }
+//        }
         cleanupMemory()
         creep.memory.state = CREEP_STATE.IDLE.ordinal
-        tickIdle()
+//        tickIdle()
     }
 }

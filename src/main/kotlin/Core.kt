@@ -1,13 +1,16 @@
 package main.kotlin
 
+
 import entities.structures.manageStructureLinkRoles
 import entities.structures.transferEnergyByLinks
+import main.kotlin.market.MarketActions
 import main.kotlin.entities.creeps.tick
 import main.kotlin.entities.structures.tick
 import main.kotlin.memory.timer
 import screeps.api.*
 
 class Core {
+    val market: MarketActions = MarketActions()
 
     //---------------------------------------------------------------------------------------
     fun tick() {
@@ -58,7 +61,7 @@ class Core {
 
     //---------------------------------------------------------------------------------------
     private fun postActions() {
-
+        market.tick()
     }
 
 }

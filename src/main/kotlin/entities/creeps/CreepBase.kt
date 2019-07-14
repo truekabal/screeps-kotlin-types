@@ -1,6 +1,8 @@
 package main.kotlin.entities.creeps
 
 import entities.creeps.CreepManager
+import entities.creeps.emptySpace
+import entities.creeps.isEmpty
 import entities.structures.isFull
 import main.kotlin.CREEP_ROLE
 import main.kotlin.CREEP_STATE
@@ -10,6 +12,7 @@ import screeps.api.structures.Structure
 import screeps.api.structures.StructureLink
 import screeps.api.structures.StructureSpawn
 import screeps.api.structures.StructureTower
+import screeps.utils.getOrDefault
 import screeps.utils.unsafe.delete
 import kotlin.math.min
 
@@ -19,8 +22,8 @@ abstract class CreepBase(val creep: Creep) {
         when(creep.memory.state) {
             CREEP_STATE.IDLE.ordinal -> tickIdle()
             CREEP_STATE.HARVEST.ordinal -> harvest()
-            CREEP_STATE.TRANSFER_ENERGY.ordinal -> transferResource()
-            CREEP_STATE.WITHDRAW_ENERGY.ordinal -> withdrawEnergy()
+            CREEP_STATE.TRANSFER.ordinal -> transferResource()
+            CREEP_STATE.WITHDRAW.ordinal -> withdrawEnergy()
         }
     }
 
@@ -80,6 +83,7 @@ abstract class CreepBase(val creep: Creep) {
         return getTargetToTransferEnergy()
     }
 
+    //------------------------------------------------------------------------------------------------------
     open fun getTargetToTransferEnergy(pos:RoomPosition = creep.pos):Structure? {
         // spawn
         val types = arrayOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION)
@@ -100,6 +104,11 @@ abstract class CreepBase(val creep: Creep) {
     }
 
     //------------------------------------------------------------------------------------------------------
+    open fun getTargetToTransferResource():Structure? {
+        return null
+    }
+
+    //------------------------------------------------------------------------------------------------------
     protected fun withdrawEnergy() {
         val target:Structure? = Game.getObjectById(creep.memory.targetID)
         if (target == null) {
@@ -109,23 +118,36 @@ abstract class CreepBase(val creep: Creep) {
             return
         }
 
-        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.carryCapacity))
+        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.emptySpace))
         when(result) {
             ERR_NOT_IN_RANGE -> moveTo(target)
             ERR_NOT_ENOUGH_RESOURCES -> {
                 cleanupMemory()
                 creep.memory.state = CREEP_STATE.IDLE.ordinal
             }
-            OK -> onEnergyWithdraw()
+            ERR_FULL, OK -> onWithdraw()
         }
     }
 
     //------------------------------------------------------------------------------------------------------
     protected fun transferResource() {
-        if (creep.carry.energy == 0) {
-            onResourceTransferComplete()
+        if (creep.isEmpty) {
+            onTransferComplete()
             return
         }
+
+        val resource:ResourceConstant
+        if (creep.memory.resource != null) {
+            resource = creep.memory.resource!!
+            val carryAmount = creep.carry.getOrDefault(resource, 0)
+            if (carryAmount == 0) {
+                onTransferComplete()
+                return
+            }
+        } else {
+            resource = RESOURCE_ENERGY
+        }
+
 
         var target: Structure?
         if (creep.memory.targetID == null) {
@@ -148,7 +170,7 @@ abstract class CreepBase(val creep: Creep) {
 
         }
 
-        val result = creep.transfer(target, RESOURCE_ENERGY)
+        val result = creep.transfer(target, resource) //TODO: resourceAmount
         when(result) {
             ERR_NOT_IN_RANGE -> creep.moveTo(target)
             ERR_FULL -> {
@@ -156,9 +178,10 @@ abstract class CreepBase(val creep: Creep) {
                 creep.memory.targetID = null
                 return
             }
-            OK -> {
+            ERR_NOT_ENOUGH_RESOURCES, OK -> {
                 delete(Memory.orders[creep.memory.targetID!!])
                 creep.memory.targetID = null
+                onTransferComplete()
             }
         }
     }
@@ -185,9 +208,9 @@ abstract class CreepBase(val creep: Creep) {
         }
     }
 
-    protected open fun onResourceTransferComplete() {}
+    protected open fun onTransferComplete() {}
     protected open fun onHarvestFinished() {}
-    protected open fun onEnergyWithdraw() {}
+    protected open fun onWithdraw() {}
 
 }
 

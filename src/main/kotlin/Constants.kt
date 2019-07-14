@@ -7,7 +7,7 @@ val STRUCTURES_WITH_STORE: Array<BuildableStructureConstant> = arrayOf(STRUCTURE
 
 
 enum class CREEP_ROLE {
-    UNDEFINED,
+    UNDEFINED, //TODO: remove this
     HARVESTER,
     ENERGY_CARRIER,
     UPGRADER,
@@ -18,10 +18,10 @@ enum class CREEP_ROLE {
 }
 
 enum class CREEP_STATE {
-    UNDEFINED,
+    UNDEFINED,  //TODO: change this to IDLE
     HARVEST,
-    TRANSFER_ENERGY,
-    WITHDRAW_ENERGY,
+    TRANSFER,
+    WITHDRAW,
     IDLE,
     UPGRADE_CONTROLLER,
 }

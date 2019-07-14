@@ -19,15 +19,14 @@ class CreepHarvester(creep: Creep) : CreepBase(creep) {
         }
     }
 
-    override fun onResourceTransferComplete() {
+    override fun onTransferComplete() {
         creep.memory.targetID = creep.memory.sourceID
         creep.memory.state = CREEP_STATE.HARVEST.ordinal
-        harvest()
     }
 
     override fun onHarvestFinished() {
         val target = getTargetToTransferEnergy(Game.getObjectById<Source>(creep.memory.targetID)!!)
-        creep.memory.state = CREEP_STATE.TRANSFER_ENERGY.ordinal
+        creep.memory.state = CREEP_STATE.TRANSFER.ordinal
         if (target != null) {
             creep.memory.targetID = target.id
             transferResource()
