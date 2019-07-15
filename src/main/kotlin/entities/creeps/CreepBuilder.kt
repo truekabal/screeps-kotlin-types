@@ -30,6 +30,7 @@ class CreepBuilder(creep: Creep) : CreepBase(creep) {
                 if (building != null) {
                     creep.memory.targetID = building.id
                 } else {
+                    creep.suicide()
                     return
                 }
             }

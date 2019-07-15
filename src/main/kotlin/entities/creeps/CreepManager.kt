@@ -161,13 +161,13 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         }
 
         // ------------  towers  ------------
-        val towers = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {it.structureType == STRUCTURE_TOWER }})
-        if (towers.isNotEmpty()) {
-            for (tower in towers) {
-                if (Memory.orders[tower.id] == null && tower.unsafeCast<StructureTower>().capacityCoef() < 0.75) {
-                    return tower
-                }
-            }
+        val tower = creep.pos.findClosestByRange(type = FIND_MY_STRUCTURES, opts = options { filter = {
+            it.structureType == STRUCTURE_TOWER &&
+            Memory.orders[it.id] == null &&
+            it.unsafeCast<StructureTower>().capacityCoef() < 0.75
+        }})
+        if (tower != null) {
+            return tower
         }
 
         val terminal = creep.room.terminal
