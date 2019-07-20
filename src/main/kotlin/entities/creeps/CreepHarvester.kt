@@ -6,6 +6,7 @@ import main.kotlin.memory.sourceID
 import main.kotlin.memory.state
 import main.kotlin.memory.targetID
 import screeps.api.*
+import screeps.api.structures.Structure
 
 class CreepHarvester(creep: Creep) : CreepBase(creep) {
     companion object {
@@ -24,8 +25,13 @@ class CreepHarvester(creep: Creep) : CreepBase(creep) {
         creep.memory.state = CREEP_STATE.HARVEST.ordinal
     }
 
+    override fun getTargetToTransferEnergy(pos: RoomPosition): Structure? {
+        return getTargetToTransferEnergy(Game.getObjectById<Source>(creep.memory.sourceID)!!) ?:
+               super.getTargetToTransferEnergy(pos)
+    }
+
     override fun onHarvestFinished() {
-        val target = getTargetToTransferEnergy(Game.getObjectById<Source>(creep.memory.targetID)!!)
+        val target = getTargetToTransferEnergy()
         creep.memory.state = CREEP_STATE.TRANSFER.ordinal
         if (target != null) {
             creep.memory.targetID = target.id

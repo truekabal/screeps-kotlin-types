@@ -10,7 +10,7 @@ import screeps.utils.unsafe.jsObject
 import kotlin.random.Random
 
 val spawnParams: HashMap<Int, Array<out BodyPartConstant>> = hashMapOf(
-    CREEP_ROLE.HARVESTER.ordinal  to arrayOf(WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY),
+    CREEP_ROLE.HARVESTER.ordinal  to arrayOf(WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY),
     CREEP_ROLE.BUILDER.ordinal    to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
     CREEP_ROLE.FIXER.ordinal      to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
     CREEP_ROLE.CLAIM.ordinal      to arrayOf(CLAIM, CLAIM, MOVE),
@@ -47,7 +47,7 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
         )
 
         val maxCreepsByRole = hashMapOf<Int, Int>(
-                CREEP_ROLE.HARVESTER.ordinal  to 6,
+                CREEP_ROLE.HARVESTER.ordinal  to 2,
                 CREEP_ROLE.BUILDER.ordinal    to kotlin.math.min(kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(), 3),
                 CREEP_ROLE.FIXER.ordinal      to 1,
                 CREEP_ROLE.CLAIM.ordinal      to (if (claimerNeed()) 1 else 0),

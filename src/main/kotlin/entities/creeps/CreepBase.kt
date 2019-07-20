@@ -80,7 +80,7 @@ abstract class CreepBase(val creep: Creep) {
             }
         }
 
-        return getTargetToTransferEnergy()
+        return null
     }
 
     //------------------------------------------------------------------------------------------------------
