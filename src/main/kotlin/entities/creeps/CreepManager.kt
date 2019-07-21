@@ -175,6 +175,15 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
             return terminal
         }
 
+        val nuke:StructureNuker? = creep.pos.findClosestByRange(type = FIND_MY_STRUCTURES, opts = options {filter = {
+            it.structureType == STRUCTURE_NUKER &&
+            it.unsafeCast<StructureNuker>().energy < it.unsafeCast<StructureNuker>().energyCapacity
+        }}).unsafeCast<StructureNuker>()
+
+        if (nuke != null) {
+            return nuke
+        }
+
         if (creep.carry.energy > 0) {
             return creep.room.storage
         }
