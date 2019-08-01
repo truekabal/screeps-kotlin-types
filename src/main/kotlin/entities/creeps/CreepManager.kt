@@ -7,6 +7,7 @@ import main.kotlin.memory.*
 import screeps.api.*
 import screeps.api.structures.*
 import screeps.utils.getOrDefault
+import screeps.utils.isNotEmpty
 import kotlin.math.min
 
 val SPAWNS_AND_EXTENSIONS = arrayOf(STRUCTURE_SPAWN, STRUCTURE_EXTENSION, STRUCTURE_POWER_SPAWN)
@@ -18,6 +19,10 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
             memory.state = CREEP_STATE.IDLE.ordinal
             memory.room = room.name
         }
+    }
+
+    private fun hasSourceLinks():Boolean {
+        return creep.room.memory.links.sources.isNotEmpty() && creep.room.memory.links.sources.values.any { Game.getObjectById<StructureLink>(it) != null }
     }
 
     private fun getStorageLink():StructureLink? {
@@ -53,7 +58,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
                 creep.memory.targetID = link.id
                 creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
                 creep.memory.resource = RESOURCE_ENERGY
-                creep.memory.resourceAmount = min(link.energy - link.energyCapacity / 2, creep.emptySpace)
+                creep.memory.resourceAmount = min(link.energy - link.energyCapacity / 2, creep.emptySpace())
                 creep.memory.nextTargetID = target.id
                 return true
             }
@@ -81,7 +86,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
 
     //----------------------------------------------------------------------------------------------------
     private fun transferPower():Boolean {
-        if (creep.isFull) {
+        if (creep.isFull()) {
             return false
         }
 
@@ -96,7 +101,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         )
         for (container:Store? in powerContainers) {
             if (container != null && container.store.getOrDefault(RESOURCE_POWER, 0) > 0) {
-                val powerAmount = arrayOf(powerSpawn.requiredPower, container.store[RESOURCE_POWER]!!.toInt(), creep.emptySpace).min()!!
+                val powerAmount = arrayOf(powerSpawn.requiredPower(), container.store[RESOURCE_POWER]!!.toInt(), creep.emptySpace()).min()!!
                 creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
                 creep.memory.targetID = container.unsafeCast<Structure>().id
                 creep.memory.resourceAmount = powerAmount

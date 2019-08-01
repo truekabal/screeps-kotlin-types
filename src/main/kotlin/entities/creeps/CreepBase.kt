@@ -118,7 +118,7 @@ abstract class CreepBase(val creep: Creep) {
             return
         }
 
-        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.emptySpace))
+        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.emptySpace()))
         when(result) {
             ERR_NOT_IN_RANGE -> moveTo(target)
             ERR_NOT_ENOUGH_RESOURCES -> {
@@ -131,7 +131,7 @@ abstract class CreepBase(val creep: Creep) {
 
     //------------------------------------------------------------------------------------------------------
     protected fun transferResource() {
-        if (creep.isEmpty) {
+        if (creep.isEmpty()) {
             onTransferComplete()
             return
         }
@@ -203,8 +203,9 @@ abstract class CreepBase(val creep: Creep) {
             creep.memory.targetID = target.id
         }
 
-        if (creep.harvest(target) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(target)
+        val result = creep.harvest(target)
+        when (result) {
+            ERR_NOT_ENOUGH_RESOURCES, ERR_NOT_IN_RANGE -> creep.moveTo(target)
         }
     }
 

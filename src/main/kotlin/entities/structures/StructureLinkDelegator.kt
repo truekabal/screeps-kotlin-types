@@ -113,7 +113,7 @@ fun transferEnergyByLinks(room:Room) {
         }
     }
 
-    if (memory.storage != null) {
+    if (memory.storage != null && availableLinks.isEmpty()) {
         link = Game.getObjectById(memory.storage)
         if (link != null && link.cooldown == 0 && !link.lessThanHalfCapacity()) {
             availableLinks = availableLinks.plus(link)
