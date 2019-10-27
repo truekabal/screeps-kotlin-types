@@ -1,5 +1,7 @@
 package main.kotlin.entities.creeps
 
+import entities.isEmpty
+import entities.isFull
 import main.kotlin.memory.room
 import main.kotlin.memory.targetID
 import main.kotlin.memory.upgrading
@@ -20,12 +22,12 @@ class CreepFixer(creep: Creep) : CreepBase(creep) {
             room = creep.room
         }
 
-        if(creep.memory.upgrading && creep.carry.energy == 0) {
+        if(creep.memory.upgrading && creep.isEmpty()) {
             creep.memory.upgrading = false;
             creep.memory.targetID = null
             creep.say("🔄 harvest")
         }
-        if(!creep.memory.upgrading && creep.carry.energy == creep.carryCapacity) {
+        if(!creep.memory.upgrading && creep.isFull()) {
             creep.memory.upgrading = true;
             creep.say("⚡ repair");
         }
@@ -64,7 +66,7 @@ class CreepFixer(creep: Creep) : CreepBase(creep) {
 
             val energy = room.find(FIND_DROPPED_RESOURCES, options {
                 filter = {
-                    it.resourceType == RESOURCE_ENERGY && it.amount > creep.carryCapacity / 4
+                    it.resourceType == RESOURCE_ENERGY && it.amount > creep.store.getCapacity() / 4
                 }
             })
 
@@ -76,7 +78,7 @@ class CreepFixer(creep: Creep) : CreepBase(creep) {
             }
 
             val storage = room.storage
-            if (storage != null && storage.store[RESOURCE_ENERGY]!! >= creep.carryCapacity) {
+            if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! >= creep.store.getCapacity()) {
                 if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(storage)
                 }

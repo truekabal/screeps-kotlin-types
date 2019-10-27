@@ -1,6 +1,6 @@
 package entities.creeps
 
-import entities.structures.*
+import entities.*
 import main.kotlin.CREEP_STATE
 import main.kotlin.entities.creeps.CreepBase
 import main.kotlin.memory.*
@@ -52,13 +52,18 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         // check withdraw from link
         val link:StructureLink? = getStorageLink()
         var target:Structure?
-        if (link != null && link.moreThanHalfCapacity()) {
+        if (link != null && link.store.getUsedCapacity(RESOURCE_ENERGY)!! > link.store.getCapacity(RESOURCE_ENERGY)!! / 2) {
             target = getTargetToTransferEnergy(link)
             if (target != null) {
                 creep.memory.targetID = link.id
                 creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
                 creep.memory.resource = RESOURCE_ENERGY
-                creep.memory.resourceAmount = min(link.energy - link.energyCapacity / 2, creep.emptySpace())
+
+                creep.memory.resourceAmount = min(
+                    link.store.getUsedCapacity(RESOURCE_ENERGY)!! - link.store.getCapacity(RESOURCE_ENERGY)!! / 2,
+                    creep.store.getFreeCapacity()
+                )
+
                 creep.memory.nextTargetID = target.id
                 return true
             }
@@ -76,7 +81,10 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
         creep.memory.resource = RESOURCE_ENERGY
         if (target.structureType == STRUCTURE_LINK) {
-            creep.memory.resourceAmount = min(creep.carryCapacity, target.unsafeCast<EnergyContainer>().energyCapacity / 2 - target.unsafeCast<EnergyContainer>().energy)
+            creep.memory.resourceAmount = min(
+                creep.store.getCapacity(),
+                target.unsafeCast<IStore>().store.getCapacity(RESOURCE_ENERGY)!! / 2 - target.unsafeCast<IStore>().store.getUsedCapacity(RESOURCE_ENERGY)!!
+            )
         } else {
             creep.memory.resourceAmount = 0
         }
@@ -92,16 +100,20 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
 
         val powerSpawn = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {
                     it.structureType == STRUCTURE_POWER_SPAWN &&
-                    it.unsafeCast<StructurePowerSpawn>().power < it.unsafeCast<StructurePowerSpawn>().powerCapacity / 4
+                    it.unsafeCast<StructurePowerSpawn>().store.getUsedCapacity(RESOURCE_POWER)!! < it.unsafeCast<StructurePowerSpawn>().store.getCapacity(RESOURCE_POWER)!! / 4
         }}).firstOrNull().unsafeCast<StructurePowerSpawn?>() ?: return false
 
-        val powerContainers:Array<Store?> = arrayOf(
+        val powerContainers:Array<IStore?> = arrayOf(
             creep.room.storage,
             creep.room.terminal
         )
-        for (container:Store? in powerContainers) {
-            if (container != null && container.store.getOrDefault(RESOURCE_POWER, 0) > 0) {
-                val powerAmount = arrayOf(powerSpawn.requiredPower(), container.store[RESOURCE_POWER]!!.toInt(), creep.emptySpace()).min()!!
+        for (container:IStore? in powerContainers) {
+            if (container != null && container.store.getUsedCapacity(RESOURCE_POWER)!! > 0) {
+                val powerAmount = arrayOf(
+                    powerSpawn.store.getFreeCapacity(RESOURCE_POWER)!!,
+                    container.store.getUsedCapacity(RESOURCE_POWER)!!.toInt(),
+                    creep.store.getFreeCapacity()
+                ).min()!!
                 creep.memory.state = CREEP_STATE.WITHDRAW.ordinal
                 creep.memory.targetID = container.unsafeCast<Structure>().id
                 creep.memory.resourceAmount = powerAmount
@@ -132,7 +144,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
     //----------------------------------------------------------------------------------------------------
     override fun getTargetToTransferEnergy(pos: RoomPosition): Structure? {
         val link:StructureLink? = getStorageLink()
-        if (link != null && link.lessThanHalfCapacity()) {
+        if (link != null && link.store.getUsedCapacity(RESOURCE_ENERGY)!! < link.store.getCapacity(RESOURCE_ENERGY)!! / 2) {
             return link
         }
 
@@ -140,7 +152,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         val spawnStuff = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {
                         Memory.orders[it.id] == null &&
                         it.structureType in SPAWNS_AND_EXTENSIONS &&
-                        !it.unsafeCast<EnergyContainer>().isFull()
+                        it.unsafeCast<IStore>().store.getFreeCapacity(RESOURCE_ENERGY)!! > 0
                 }
             }
         )
@@ -169,7 +181,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         val tower = creep.pos.findClosestByRange(type = FIND_MY_STRUCTURES, opts = options { filter = {
             it.structureType == STRUCTURE_TOWER &&
             Memory.orders[it.id] == null &&
-            it.unsafeCast<StructureTower>().capacityCoef() < 0.75
+            it.unsafeCast<StructureTower>().capacityCoef(RESOURCE_ENERGY) < 0.75
         }})
         if (tower != null) {
             return tower
@@ -182,14 +194,14 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
 
         val nuke:StructureNuker? = creep.pos.findClosestByRange(type = FIND_MY_STRUCTURES, opts = options {filter = {
             it.structureType == STRUCTURE_NUKER &&
-            it.unsafeCast<StructureNuker>().energy < it.unsafeCast<StructureNuker>().energyCapacity
+            it.unsafeCast<StructureNuker>().store.getFreeCapacity(RESOURCE_ENERGY)!! > 0
         }}).unsafeCast<StructureNuker>()
 
         if (nuke != null) {
             return nuke
         }
 
-        if (creep.carry.energy > 0) {
+        if (creep.isNotEmpty()) {
             return creep.room.storage
         }
 

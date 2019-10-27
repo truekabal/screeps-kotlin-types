@@ -1,5 +1,8 @@
 package main.kotlin.entities.creeps
 
+import entities.isEmpty
+import entities.isFull
+import entities.isNotEmpty
 import main.kotlin.memory.controller
 import main.kotlin.memory.links
 import main.kotlin.memory.targetID
@@ -17,11 +20,11 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
 
     override fun tick() {
         val controller = Game.getObjectById<StructureController>(creep.memory.targetID)!!
-        if(creep.memory.upgrading && creep.carry.energy == 0) {
+        if(creep.memory.upgrading && creep.isEmpty()) {
             creep.memory.upgrading = false
             creep.say("🔄 harvest")
         }
-        if(!creep.memory.upgrading && creep.carry.energy == creep.carryCapacity) {
+        if(!creep.memory.upgrading && creep.isFull()) {
             creep.memory.upgrading = true
             creep.say("upgrade")
         }
@@ -32,7 +35,7 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
             }
         } else {
             val link: StructureLink? = Game.getObjectById(creep.room.memory.links.controller)
-            if (link != null && link.energy > 0) {
+            if (link != null && link.store.getUsedCapacity(RESOURCE_ENERGY)!! > 0) {
                 if (creep.withdraw(link, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(link)
                 }
@@ -40,7 +43,7 @@ class CreepUpgrader(creep: Creep) : CreepBase(creep) {
             }
 
             val storage = controller.room.storage
-            if (storage != null && storage.store[RESOURCE_ENERGY]!! >= creep.carryCapacity) {
+            if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! >= creep.store.getCapacity()) {
                 if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(storage)
                 }

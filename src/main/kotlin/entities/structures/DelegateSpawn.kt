@@ -51,7 +51,7 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
                 CREEP_ROLE.BUILDER.ordinal    to kotlin.math.min(kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(), 3),
                 CREEP_ROLE.FIXER.ordinal      to 1,
                 CREEP_ROLE.CLAIM.ordinal      to (if (claimerNeed()) 1 else 0),
-                CREEP_ROLE.UPGRADER.ordinal   to (if (storage != null && storage.store.energy > 900000) 3 else 1),
+                CREEP_ROLE.UPGRADER.ordinal   to (if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! > 900000) 3 else 1),
                 CREEP_ROLE.MANAGER.ordinal    to (if (storage != null) 1 else 0)
         )
 

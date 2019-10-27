@@ -61,11 +61,13 @@ fun manageStructureLinkRoles() {
         findLinksFor(room.controller, memory.controller, links) { memory.controller = it }
     }
 
+    /*
     val usedCPU = Game.cpu.getUsed()
     if (usedCPU > prevUsedCPU)
     {
         console.log("manageStructureLinkRoles execution cost: ${usedCPU - prevUsedCPU}")
     }
+    */
 }
 
 fun findLinksFor(obj:RoomObject?, linkID:String?, links:Array<StructureLink>, callback: (linkID:String) -> Unit):Boolean {
@@ -107,7 +109,7 @@ fun transferEnergyByLinks(room:Room) {
     for ((sourceID, linkID) in memory.sources) {
         if (linkID != null) {
             link = Game.getObjectById(linkID)
-            if (link != null && link.cooldown == 0 && link.energy > MIN_ENERGY_TO_TRANSFER) {
+            if (link != null && link.cooldown == 0 && link.store.getUsedCapacity(RESOURCE_ENERGY)!! > MIN_ENERGY_TO_TRANSFER) {
                 availableLinks = availableLinks.plus(link)
             }
         }
@@ -115,7 +117,7 @@ fun transferEnergyByLinks(room:Room) {
 
     if (memory.storage != null && availableLinks.isEmpty()) {
         link = Game.getObjectById(memory.storage)
-        if (link != null && link.cooldown == 0 && !link.lessThanHalfCapacity()) {
+        if (link != null && link.cooldown == 0 && link.store.getUsedCapacity(RESOURCE_ENERGY)!! > link.store.getCapacity(RESOURCE_ENERGY)!! / 2) {
             availableLinks = availableLinks.plus(link)
         }
     }
@@ -130,8 +132,8 @@ fun transferEnergyByLinks(room:Room) {
             continue
         }
 
-        if (target.energy < target.energyCapacity - MIN_ENERGY_TO_TRANSFER / 2) {
-            var energyNeed = target.energyCapacity - target.energy
+        if (target.store.getUsedCapacity(RESOURCE_ENERGY)!! < target.store.getCapacity(RESOURCE_ENERGY)!! - MIN_ENERGY_TO_TRANSFER / 2) {
+            var energyNeed = target.store.getFreeCapacity(RESOURCE_ENERGY)!!
             var energyReceived = 0
             var lastUsedIndex:Int = 0
 
@@ -139,7 +141,7 @@ fun transferEnergyByLinks(room:Room) {
                 if (target == source) {
                     continue
                 }
-                val energy = min(energyNeed, source.energy)
+                val energy = min(energyNeed, source.store.getUsedCapacity(RESOURCE_ENERGY)!!)
                 val result = source.transferEnergy(target, energy)
                 if (result == OK) {
                     energyReceived += (energy - ceil(energy * LINK_LOSS_RATIO)).toInt()

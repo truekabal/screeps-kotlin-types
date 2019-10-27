@@ -1,12 +1,11 @@
 package main.kotlin.entities.structures
 
 import screeps.api.*
-import screeps.api.structures.Structure
 import screeps.api.structures.StructureTower
 
 class DelegateTower(private val tower: StructureTower): StructureBase(tower) {
     override fun tick() {
-        if (tower.energy == 0) return
+        if (tower.store.getUsedCapacity(RESOURCE_ENERGY)!! == 0) return
 
         val hostiles = tower.room.find(FIND_HOSTILE_CREEPS)
         if (hostiles.isNotEmpty()) {
@@ -21,7 +20,7 @@ class DelegateTower(private val tower: StructureTower): StructureBase(tower) {
             return
         }
 
-        if (tower.energy < tower.energyCapacity / 2) return
+        if (tower.store.getUsedCapacity(RESOURCE_ENERGY)!! < tower.store.getCapacity(RESOURCE_ENERGY)!! / 2) return
 
         val structures = tower.room.find(FIND_STRUCTURES, options { filter = { (it.unsafeCast<Decaying>()).ticksToDecay > 0 && it.hits < 2500000 && it.hits < it.hitsMax } })
         if (structures.isNotEmpty()) {

@@ -1,9 +1,9 @@
 package main.kotlin.entities.creeps
 
 import entities.creeps.CreepManager
-import entities.creeps.emptySpace
-import entities.creeps.isEmpty
-import entities.structures.isFull
+import entities.isFull
+import entities.isNotEmpty
+import entities.isNotFull
 import main.kotlin.CREEP_ROLE
 import main.kotlin.CREEP_STATE
 import main.kotlin.memory.*
@@ -12,7 +12,7 @@ import screeps.api.structures.Structure
 import screeps.api.structures.StructureLink
 import screeps.api.structures.StructureSpawn
 import screeps.api.structures.StructureTower
-import screeps.utils.getOrDefault
+import screeps.utils.isEmpty
 import screeps.utils.unsafe.delete
 import kotlin.math.min
 
@@ -49,7 +49,7 @@ abstract class CreepBase(val creep: Creep) {
         }})
 
         if (obj != null) {
-            if (obj.structureType == STRUCTURE_LINK && obj.unsafeCast<EnergyContainer>().energy != 0) {
+            if (obj.structureType == STRUCTURE_LINK && obj.unsafeCast<IStore>().store.getUsedCapacity(RESOURCE_ENERGY)!! > 0) {
                 return creep.room.storage
             }
         }
@@ -67,7 +67,7 @@ abstract class CreepBase(val creep: Creep) {
             type = FIND_MY_STRUCTURES,
             opts = options { filter = {it.structureType == STRUCTURE_TOWER }}
         ) as StructureTower?
-        if (tower != null && Memory.orders[tower.id] == null && tower.energy < tower.energyCapacity * 0.75 ) {
+        if (tower != null && Memory.orders[tower.id] == null && tower.store.getUsedCapacity(RESOURCE_ENERGY)!! < tower.store.getCapacity(RESOURCE_ENERGY)!! * 0.75 ) {
             Memory.orders[tower.id] = creep.id
             return tower
         }
@@ -75,7 +75,7 @@ abstract class CreepBase(val creep: Creep) {
         val linkID = creep.room.memory.links.sources[source.id]
         if (linkID != null) {
             val link = Game.getObjectById<StructureLink>(linkID)
-            if (link != null && !link.isFull()) {
+            if (link != null && link.store.getFreeCapacity(RESOURCE_ENERGY)!! > 0) {
                 return link
             }
         }
@@ -92,7 +92,7 @@ abstract class CreepBase(val creep: Creep) {
                 opts = options { filter = {
                     Memory.orders[it.id] == null &&
                     it.structureType in types &&
-                    (it.unsafeCast<EnergyContainer>()).energy < (it.unsafeCast<EnergyContainer>()).energyCapacity
+                    it.unsafeCast<IStore>().isNotFull()
                 } }
         )
         if (target != null) {
@@ -118,7 +118,7 @@ abstract class CreepBase(val creep: Creep) {
             return
         }
 
-        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.emptySpace()))
+        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.store.getFreeCapacity()))
         when(result) {
             ERR_NOT_IN_RANGE -> moveTo(target)
             ERR_NOT_ENOUGH_RESOURCES -> {
@@ -131,7 +131,7 @@ abstract class CreepBase(val creep: Creep) {
 
     //------------------------------------------------------------------------------------------------------
     protected fun transferResource() {
-        if (creep.isEmpty()) {
+        if (creep.store.isEmpty()) {
             onTransferComplete()
             return
         }
@@ -139,8 +139,7 @@ abstract class CreepBase(val creep: Creep) {
         val resource:ResourceConstant
         if (creep.memory.resource != null) {
             resource = creep.memory.resource!!
-            val carryAmount = creep.carry.getOrDefault(resource, 0)
-            if (carryAmount == 0) {
+            if (creep.store.getUsedCapacity(resource) == 0) {
                 onTransferComplete()
                 return
             }
@@ -188,7 +187,7 @@ abstract class CreepBase(val creep: Creep) {
 
     //------------------------------------------------------------------------------------------------------
     protected fun harvest() {
-        if (creep.carry.energy == creep.carryCapacity) {
+        if (creep.isFull()) {
             onHarvestFinished()
             return
         }

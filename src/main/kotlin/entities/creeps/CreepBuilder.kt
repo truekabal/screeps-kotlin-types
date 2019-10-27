@@ -4,7 +4,9 @@ import main.kotlin.IMPORTANT_BUILD_TYPES
 import main.kotlin.memory.building
 import main.kotlin.memory.targetID
 import screeps.api.*
-import screeps.api.structures.StructureController
+
+import entities.isEmpty
+import entities.isFull
 
 class CreepBuilder(creep: Creep) : CreepBase(creep) {
     companion object {
@@ -14,11 +16,11 @@ class CreepBuilder(creep: Creep) : CreepBase(creep) {
     }
 
     override fun tick() {
-        if(creep.memory.building && creep.carry.energy == 0) {
+        if(creep.memory.building && creep.isEmpty()) {
             creep.memory.building = false
             creep.say("🔄 harvest")
         }
-        if(!creep.memory.building && creep.carry.energy == creep.carryCapacity) {
+        if(!creep.memory.building && creep.isFull()) {
             creep.memory.building = true
             creep.say("\uD83D\uDEA7 build")
         }
@@ -49,7 +51,7 @@ class CreepBuilder(creep: Creep) : CreepBase(creep) {
 
             val energy = creep.room.find(FIND_DROPPED_RESOURCES, options {
                 filter = {
-                    it.resourceType == screeps.api.RESOURCE_ENERGY && it.amount > creep.carryCapacity / 4
+                    it.resourceType == screeps.api.RESOURCE_ENERGY && it.amount > creep.store.getCapacity() / 4
                 }
             })
 
@@ -61,7 +63,7 @@ class CreepBuilder(creep: Creep) : CreepBase(creep) {
             }
 
             val storage = creep.room.storage
-            if (storage != null && storage.store[RESOURCE_ENERGY]!! >= creep.carryCapacity) {
+            if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! >= creep.store.getCapacity()) {
                 if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(storage)
                 }
