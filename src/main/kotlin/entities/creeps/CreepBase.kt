@@ -49,7 +49,7 @@ abstract class CreepBase(val creep: Creep) {
         }})
 
         if (obj != null) {
-            if (obj.structureType == STRUCTURE_LINK && obj.unsafeCast<IStore>().store.getUsedCapacity(RESOURCE_ENERGY)!! > 0) {
+            if (obj.structureType == STRUCTURE_LINK && obj.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY)!! > 0) {
                 return creep.room.storage
             }
         }
@@ -92,7 +92,7 @@ abstract class CreepBase(val creep: Creep) {
                 opts = options { filter = {
                     Memory.orders[it.id] == null &&
                     it.structureType in types &&
-                    it.unsafeCast<IStore>().isNotFull()
+                    it.unsafeCast<StoreOwner>().isNotFull()
                 } }
         )
         if (target != null) {
@@ -118,7 +118,7 @@ abstract class CreepBase(val creep: Creep) {
             return
         }
 
-        val result = creep.withdraw(target, creep.memory.resource!!, min(creep.memory.resourceAmount, creep.store.getFreeCapacity()))
+        val result = creep.withdraw(target.unsafeCast<StoreOwner>(), creep.memory.resource!!, min(creep.memory.resourceAmount, creep.store.getFreeCapacity()))
         when(result) {
             ERR_NOT_IN_RANGE -> moveTo(target)
             ERR_NOT_ENOUGH_RESOURCES -> {
@@ -169,7 +169,7 @@ abstract class CreepBase(val creep: Creep) {
 
         }
 
-        val result = creep.transfer(target, resource) //TODO: resourceAmount
+        val result = creep.transfer(target.unsafeCast<StoreOwner>(), resource) //TODO: resourceAmount
         when(result) {
             ERR_NOT_IN_RANGE -> creep.moveTo(target)
             ERR_FULL -> {

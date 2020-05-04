@@ -82,8 +82,8 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         creep.memory.resource = RESOURCE_ENERGY
         if (target.structureType == STRUCTURE_LINK) {
             creep.memory.resourceAmount = min(
-                creep.store.getCapacity(),
-                target.unsafeCast<IStore>().store.getCapacity(RESOURCE_ENERGY)!! / 2 - target.unsafeCast<IStore>().store.getUsedCapacity(RESOURCE_ENERGY)!!
+                creep.store.getCapacity()!!,
+                target.unsafeCast<StoreOwner>().store.getCapacity(RESOURCE_ENERGY)!! / 2 - target.unsafeCast<StoreOwner>().store.getUsedCapacity(RESOURCE_ENERGY)!!
             )
         } else {
             creep.memory.resourceAmount = 0
@@ -103,11 +103,11 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
                     it.unsafeCast<StructurePowerSpawn>().store.getUsedCapacity(RESOURCE_POWER)!! < it.unsafeCast<StructurePowerSpawn>().store.getCapacity(RESOURCE_POWER)!! / 4
         }}).firstOrNull().unsafeCast<StructurePowerSpawn?>() ?: return false
 
-        val powerContainers:Array<IStore?> = arrayOf(
+        val powerContainers:Array<StoreOwner?> = arrayOf(
             creep.room.storage,
             creep.room.terminal
         )
-        for (container:IStore? in powerContainers) {
+        for (container:StoreOwner? in powerContainers) {
             if (container != null && container.store.getUsedCapacity(RESOURCE_POWER)!! > 0) {
                 val powerAmount = arrayOf(
                     powerSpawn.store.getFreeCapacity(RESOURCE_POWER)!!,
@@ -152,7 +152,7 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
         val spawnStuff = creep.room.find(FIND_MY_STRUCTURES, opts = options { filter = {
                         Memory.orders[it.id] == null &&
                         it.structureType in SPAWNS_AND_EXTENSIONS &&
-                        it.unsafeCast<IStore>().store.getFreeCapacity(RESOURCE_ENERGY)!! > 0
+                        it.unsafeCast<StoreOwner>().store.getFreeCapacity(RESOURCE_ENERGY)!! > 0
                 }
             }
         )

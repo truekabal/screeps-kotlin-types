@@ -66,7 +66,7 @@ class CreepFixer(creep: Creep) : CreepBase(creep) {
 
             val energy = room.find(FIND_DROPPED_RESOURCES, options {
                 filter = {
-                    it.resourceType == RESOURCE_ENERGY && it.amount > creep.store.getCapacity() / 4
+                    it.resourceType == RESOURCE_ENERGY && it.amount > creep.store.getCapacity()!! / 4
                 }
             })
 
