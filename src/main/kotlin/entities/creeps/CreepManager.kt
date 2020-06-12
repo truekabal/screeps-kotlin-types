@@ -169,11 +169,9 @@ class CreepManager(creep: Creep) : CreepBase(creep) {
 
         // ------------  labs  ------------
         val labs = creep.room.find(FIND_MY_STRUCTURES, opts = options {filter = {it.structureType == STRUCTURE_LAB}}).unsafeCast<Array<StructureLab>>()
-        if (labs.isNotEmpty()) {
-            for (lab in labs) {
-                if (!lab.isFull()) {
-                    return lab
-                }
+        for (lab in labs) {
+            if (lab.store.getFreeCapacity(RESOURCE_ENERGY) != 0) {
+                return lab
             }
         }
 

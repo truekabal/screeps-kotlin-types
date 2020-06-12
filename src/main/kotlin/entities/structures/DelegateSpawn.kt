@@ -14,7 +14,7 @@ val spawnParams: HashMap<Int, Array<out BodyPartConstant>> = hashMapOf(
     CREEP_ROLE.BUILDER.ordinal    to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
     CREEP_ROLE.FIXER.ordinal      to arrayOf(WORK, WORK, MOVE, MOVE, CARRY, CARRY),
     CREEP_ROLE.CLAIM.ordinal      to arrayOf(CLAIM, CLAIM, MOVE),
-    CREEP_ROLE.UPGRADER.ordinal   to arrayOf(WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY),
+    CREEP_ROLE.UPGRADER.ordinal   to arrayOf(WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY),
     CREEP_ROLE.MANAGER.ordinal    to arrayOf(MOVE, MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY)
 )
 
@@ -51,7 +51,7 @@ class DelegateSpawn(private val spawn:StructureSpawn): StructureBase(spawn) {
                 CREEP_ROLE.BUILDER.ordinal    to kotlin.math.min(kotlin.math.ceil(spawn.room.find(FIND_CONSTRUCTION_SITES).size.toDouble() / 4).toInt(), 3),
                 CREEP_ROLE.FIXER.ordinal      to 1,
                 CREEP_ROLE.CLAIM.ordinal      to (if (claimerNeed()) 1 else 0),
-                CREEP_ROLE.UPGRADER.ordinal   to (if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! > 900000) 3 else 1),
+                CREEP_ROLE.UPGRADER.ordinal   to (if (storage != null && storage.store.getUsedCapacity(RESOURCE_ENERGY)!! > 250000) 3 else 1),
                 CREEP_ROLE.MANAGER.ordinal    to (if (storage != null) 1 else 0)
         )
 
